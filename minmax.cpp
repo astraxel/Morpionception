@@ -121,6 +121,8 @@ struct Grid
 
   //ALGORITHME MINMAX DETERMINISTE
   //Envoyer 9 comme secteur au départ, range est la valeur absolue du score max = victoire/défaite assurée
+
+  //TODO : renvoyer aussi les coups joués
   
   int min_max(int depth, bool player, int alpha, int beta, int range)
   {
