@@ -15,6 +15,8 @@ struct Grid
   Case grid[9][9];
   Case metagrid[9];
   int playgrid;
+
+  // CONSTRUCTEUR
     
   Grid()
   {
@@ -28,6 +30,8 @@ struct Grid
 	metagrid[i] = Empty;
       }
   }
+
+  //AFFICHAGE
     
   void print()
   {
@@ -61,12 +65,8 @@ struct Grid
 	printf("\n+---+---+---+\n");
       }
   }
-    
-  int eval()
-  {
-    int score = 5 + (std::rand() % 2 ? -1 : 1);
-    return score;
-  }
+
+  //FONCTIONS DE BASE DU JEU
 
   bool isFull()
   {
@@ -77,6 +77,19 @@ struct Grid
     return res;
   }
     
+  void undo_move(int old_playgrid, Coord play)
+  {
+    playgrid = old_playgrid;
+    grid[play.big][play.little] = Empty;
+  }
+
+  void do_move(Coord play, bool player){
+    grid[play.big][play.little] = player ? X : O;
+    playgrid = play.little;
+  }
+
+  //FONCTIONS AVANCÉES DU JEU
+
   std::vector<Coord> playableMoves()
   {
     std::vector<Coord> res;
@@ -98,11 +111,7 @@ struct Grid
     return res;
   }
 
-  void undo_move(int old_playgrid, Coord play)
-  {
-    playgrid = old_playgrid;
-    grid[play.big][play.little] = Empty;
-  }
+  //ALGORITHME MINMAX DETERMINISTE
     
   int min_max(int depth, bool player, int alpha, int beta)
   {
@@ -114,9 +123,8 @@ struct Grid
     for(Coord play : playable)
       {
 	int old_playgrid = playgrid;
-	grid[play.big][play.little] = player ? X : O;
-	playgrid = play.little;
-
+	do_move(play,player);
+	
 	int score_under;
 	if (player) {
 	    score_under = min_max (depth -1, !player, score, beta);
@@ -138,6 +146,14 @@ struct Grid
            
       }
         
+    return score;
+  }
+
+  //FONCTIONS D'EVALUATION
+  
+  int eval()
+  {
+    int score = 5 + (std::rand() % 2 ? -1 : 1);
     return score;
   }
 };
