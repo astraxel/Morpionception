@@ -1,7 +1,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
+#include <stack>
 #include <functional>
+#include <algorithm>
 
 enum Case {Empty, X, O};
 
@@ -10,6 +12,41 @@ struct Coord
   int big;
   int little;
 };
+
+struct MinmaxRep
+{
+  Coord coup;
+  int score;
+  std::stack<Coord> suivants;
+};
+
+MinmaxRep mini(MinmaxRep a, MinmaxRep b, int p) {
+  //Avec proba 1/p, si les scores sont égaux, b est renvoyé
+  if (a.score != b.score)
+    {
+      return (a.score < b.score) ? a : b;
+    }
+  else
+    {
+      return (std::rand() % p ? a : b);
+    }
+}
+
+MinmaxRep maxi(MinmaxRep a, MinmaxRep b, int p) {
+  //Avec proba 1/p, si les scores sont égaux, b est renvoyé
+   if (a.score != b.score)
+    {
+      return (a.score > b.score) ? a : b;
+    }
+  else
+    {
+      return (std::rand() % p ? a : b);
+    }
+}
+
+MinmaxRep emptyplay (int score) {
+  return MinmaxRep {Coord{9,9}, score, std::stack<Coord>()};
+}
 
 struct Grid
 {
@@ -96,13 +133,14 @@ struct Grid
   std::vector<Coord> playableMoves()
   {
     std::vector<Coord> res;
-    if (playgrid == 9 or isFull() ) {
-      for (int i = 0 ; i < 9 ; i++)
+    if (playgrid == 9 or isFull() ){
+      for (int i = 0 ; i < 9 ; i++){
 	for (int j = 0 ; j < 9 ; j++)
 	  {
 	    if(grid[i][j] == Empty)
 	      res.push_back(Coord{i,j});
 	  }
+      }
     }
     else {
       for (int j = 0 ; j < 9 ; j++)
@@ -124,34 +162,62 @@ struct Grid
 
   //TODO : renvoyer aussi les coups joués
   
-  int min_max(int depth, bool player, int alpha, int beta, int range)
+  MinmaxRep min_max(int depth, bool player, int alpha, int beta, int range)
   {
-    if (depth == 0) return eval();
+    if (depth == 0) return emptyplay(eval());
 
     int end_game = won_grid();
-    if (end_game != 42) return end_game*range;
+    if (end_game != 42) return emptyplay(end_game*range);
         
     std::vector<Coord> playable = playableMoves();
-    int score = player ? alpha : beta;
+    MinmaxRep score = emptyplay(player ? alpha : beta);
+    int nb_eq_scores = 1; //on veut un coup random parmi ceux du même score
     
     for(Coord play : playable)
       {
 	int old_playgrid = playgrid;
 	do_move(play,player);
 	
-	int score_under;
+	MinmaxRep score_under;
 	if (player) {
-	  score_under = min_max (depth -1, !player, score, beta, range);
-	    score = std::max(score, score_under);
+	  score_under = min_max (depth -1, !player, score.score, beta, range);
+	  score_under.suivants.push (score_under.coup);
+	  score_under.coup = play;
+	  if (score_under.score == score.score)
+	    {
+	      nb_eq_scores ++;
+	      score = std::rand() % nb_eq_scores ? score : score_under;
+	      // tous les mêmes scores sont equiprobables
+	    }
+	 
+	  if (score_under.score > score.score)
+	    {
+	      nb_eq_scores = 1;
+	      score = score_under;
+	    }
+	    	  
 	  }
 	else
 	  {
-	    score_under = min_max (depth -1, !player, alpha, score, range);
-	    score = std::min(score, score_under);
+	    score_under = min_max (depth -1, !player, alpha, score.score, range);
+	    score_under.suivants.push (score_under.coup);
+	    score_under.coup = play;
+	    if (score_under.score == score.score)
+	      {
+		nb_eq_scores ++;
+		score = std::rand() % nb_eq_scores ? score : score_under;
+		// tous les mêmes scores sont equiprobables
+	      }	    
+	    if (score_under.score < score.score)
+	      {
+		nb_eq_scores = 1;
+		score = score_under;
+	      }
+	        
 	  }              
             
             
-	if ((score <= alpha and !player) or (score >= beta and player)) {
+	if ((score.score <= alpha and !player) or (score.score >= beta and player)) {
 	  undo_move(old_playgrid, play);
 	  return score;
 	  }
@@ -227,9 +293,9 @@ int main()
   std::srand(42);
 
   Grid g;
-  int res = g.min_max(8, true, -10, 10, 10);
+  MinmaxRep res = g.min_max(8, true, -10, 10, 10);
     
-  std::printf("%d\n", res);
+  std::printf("%d\n", res.score);
     
   return 0;
 }
