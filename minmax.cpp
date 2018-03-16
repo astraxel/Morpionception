@@ -213,9 +213,18 @@ struct Grid
     }
 
     //ALGORITHME PSEUDO-EXHAUSTIF
-    MinmaxRep pseudo_complete_search(bool player, int range, std::function<int()> eval)
+  MinmaxRep pseudo_complete_search(int range, std::function<int(bool)> eval, int depth = 6, bool player = true)
     {
-        return emptyplay(0);
+      MinmaxRep play;
+      MinmaxRep res = empty_play(42);
+      while (won_grid (metagrid))
+	{
+	  play = min_max(depth, player, -range -1, range + 1, range, eval);
+	  res.suivants.push(res.coup);
+	  res.score = play.score;
+	  res.coup = play.coup;
+	}
+      return res;
     }
 
 
@@ -224,9 +233,9 @@ struct Grid
 
     //TODO : renvoyer aussi les coups joués
 
-    MinmaxRep min_max(int depth, bool player, int alpha, int beta, int range, std::function<int()> eval)
+    MinmaxRep min_max(int depth, bool player, int alpha, int beta, int range, std::function<int(bool)> eval)
     {
-        if (depth == 0) return emptyplay(eval());
+        if (depth == 0) return emptyplay(eval(player));
 
         int end_game = won_grid(metagrid);
         if (end_game != 42) return emptyplay(end_game*range);
@@ -353,12 +362,19 @@ struct Grid
     }
 };
 
+int frandom()
+{
+  return (99 - (std::rand() % 199)) 
+}
+
 int main()
 {
     std::srand(42);
 
     Grid g;
-    MinmaxRep res = g.min_max(8, true, -10, 10, 10, [&g](){return g.evaluate();});
+    std::function<int(bool)> eval = [&g](bool player){return g.random_min_max(player, frandom, 1000);};
+    MinmaxRep res = g.pseudo_complete_search(1000, eval);
+    //g.min_max(8, true, -10, 10, 10, [&g](){return g.evaluate();});
     
     std::printf("%d\n", res.score);
     
