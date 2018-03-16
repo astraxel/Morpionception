@@ -5,7 +5,7 @@
 #include <functional>
 #include <algorithm>
 
-enum Case {Empty, X, O};
+enum Case {Empty, X, O, Draw};
 
 struct Coord
 {
@@ -106,11 +106,11 @@ struct Grid
 
   //FONCTIONS DE BASE DU JEU
 
-  bool isFull()
+  bool isFull(Case* g)
   {
     bool res = true;
     for (int j = 0 ; j < 9 ; j++) {
-      if (grid[playgrid][j] == Empty) res = false;
+      if (g[j] == Empty) res = false;
     }
     return res;
   }
@@ -123,9 +123,19 @@ struct Grid
   }
 
   void do_move(Coord play, bool player){
-    grid[play.big][play.little] = player ? X : O;
+    Case p = player ? X : O
+    grid[play.big][play.little] = p;
+    if (metagrid[play.big] == Empty)
+      {
+	switch (won_grid (grid[play.big])) {
+	case (player ? 1 : -1) :
+	  metagrid[play.big] = p;
+	  break;
+	case 0:
+	  metagrid[play.big] = Draw;
+	}
+      }
     playgrid = play.little;
-    //TODO : update les conditions de victoire
   }
 
   //FONCTIONS AVANCÉES DU JEU
@@ -133,7 +143,7 @@ struct Grid
   std::vector<Coord> playableMoves()
   {
     std::vector<Coord> res;
-    if (playgrid == 9 or isFull() ){
+    if (playgrid == 9 or isFull(grid[playgrid]) ){
       for (int i = 0 ; i < 9 ; i++){
 	for (int j = 0 ; j < 9 ; j++)
 	  {
@@ -152,21 +162,56 @@ struct Grid
     return res;
   }
 
-  int won_grid () {
-    return 42; //-1 = perdu, 0 = draw, 1 = gagné, 42 = en cours
-    //TODO
+  int won_grid (Case* g) {
+    //-1 = perdu, 0 = draw, 1 = gagné, 42 = en cours
+    if (player_won(g, X)) return 1;
+    if (player_won(g, O)) return -1;
+    if (is_complete(g))   return 0;
+    return 42;
   }
+
+  bool is_complete(Case* g) {
+    bool res = false;
+    for (int j=0 ; j <9 ; j++)
+      {
+	if (g[j] == Empty) res = false;
+      }
+    return res;
+  }
+
+  bool player_won (Case* g, Case p){
+    bool res = false;
+    //Test des lignes
+    for (int i = 0; i<3; i++) {
+      res = res or (g[3*i] and g[3*i+1] and g[3*i+1]);
+    }
+    //Test des colonnes
+    for (int i = 0; i<3; i++){
+      res = res or (g[i] and g[i+3] and g[i+6]);
+    }
+    //Test des diagonales
+    res = res or (g[0] and g[4] and g[8]) or (g[2] and g[4] and g[6]);
+
+    return res;
+  }
+
+  //ALGORITHME PSEUDO-EXHAUSTIF
+  MinmaxRep pseudo_complete_search(bool player, int range, std::function<int()> eval)
+  {
+    return emptyplay(0);
+  }
+
 
   //ALGORITHME MINMAX DETERMINISTE
   //Envoyer 9 comme secteur au départ, range est la valeur absolue du score max = victoire/défaite assurée
 
   //TODO : renvoyer aussi les coups joués
   
-  MinmaxRep min_max(int depth, bool player, int alpha, int beta, int range)
+  MinmaxRep min_max(int depth, bool player, int alpha, int beta, int range, std::function<int()> eval)
   {
     if (depth == 0) return emptyplay(eval());
 
-    int end_game = won_grid();
+    int end_game = won_grid(metagrid);
     if (end_game != 42) return emptyplay(end_game*range);
         
     std::vector<Coord> playable = playableMoves();
@@ -180,7 +225,7 @@ struct Grid
 	
 	MinmaxRep score_under;
 	if (player) {
-	  score_under = min_max (depth -1, !player, score.score, beta, range);
+	  score_under = min_max (depth -1, !player, score.score, beta, range, eval);
 	  score_under.suivants.push (score_under.coup);
 	  score_under.coup = play;
 	  if (score_under.score == score.score)
@@ -199,7 +244,7 @@ struct Grid
 	  }
 	else
 	  {
-	    score_under = min_max (depth -1, !player, alpha, score.score, range);
+	    score_under = min_max (depth -1, !player, alpha, score.score, range, eval);
 	    score_under.suivants.push (score_under.coup);
 	    score_under.coup = play;
 	    if (score_under.score == score.score)
@@ -233,7 +278,7 @@ struct Grid
 
   int random_min_max(bool player, std::function<int()> choice, int range) {
     
-    int end_game = won_grid();
+    int end_game = won_grid(metagrid);
     if (end_game != 42) return end_game*range;
 
     std::vector<Coord> playable = playableMoves();
@@ -281,7 +326,7 @@ struct Grid
 
   //FONCTIONS D'EVALUATION
   
-  int eval()
+  int evaluate()
   {
     int score = 5 + (std::rand() % 2 ? -1 : 1);
     return score;
@@ -293,7 +338,7 @@ int main()
   std::srand(42);
 
   Grid g;
-  MinmaxRep res = g.min_max(8, true, -10, 10, 10);
+  MinmaxRep res = g.min_max(8, true, -10, 10, 10, [&g](){return g.evaluate();});
     
   std::printf("%d\n", res.score);
     
