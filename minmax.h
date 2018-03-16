@@ -7,6 +7,7 @@
 #include <stack>
 #include <functional>
 #include <algorithm>
+#include <iostream>
 
 enum Case {Empty, X, O, Draw};
 
@@ -47,17 +48,16 @@ struct Grid
     bool player_won(Case* g, Case p);
 
     //ALGORITHME PSEUDO-EXHAUSTIF
-    MinmaxRep pseudo_complete_search(bool player, int range,
-                                     std::function<int()> eval);
+    MinmaxRep pseudo_complete_search(int range, std::function<int(bool)> eval,
+                                      int depth, bool player);
 
     /*
      * ALGORITHME MINMAX DETERMINISTE
      * Envoyer 9 comme secteur au départ, range est la valeur absolue du
      * score max = victoire/défaite assurée
-     * TODO : renvoyer aussi les coups joués
      */
     MinmaxRep min_max(int depth, bool player, int alpha, int beta, int range,
-                      std::function<int()> eval);
+                      std::function<int(bool)> eval);
 
     //ALGORITHME MINMAX RANDOMISE
     int random_min_max(bool player, std::function<int()> choice, int range);

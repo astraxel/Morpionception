@@ -26,7 +26,7 @@ MinmaxRep maxi(MinmaxRep a, MinmaxRep b, int p)
     }
 }
 
-MinmaxRep emptyplay(int score)
+MinmaxRep empty_play(int score)
 {
     return MinmaxRep {Coord{9,9}, score, std::stack<Coord>()};
 }
@@ -187,12 +187,15 @@ bool Grid::player_won(Case* g, Case p)
     return res;
 }
 
-MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval, int depth = 6, bool player = true)
+MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval, int depth, bool player)
 {
   MinmaxRep play;
   MinmaxRep res = empty_play(42);
-  while (won_grid (metagrid))
+  int yolo = 0;
+  while (won_grid (metagrid) == 42)
     {
+      yolo++;
+      std::cout << yolo << std::endl;
       play = min_max(depth, player, -range -1, range + 1, range, eval);
       res.suivants.push(res.coup);
       res.score = play.score;
@@ -202,15 +205,15 @@ MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval,
 }
 
 MinmaxRep Grid::min_max(int depth, bool player, int alpha, int beta, int range,
-                        std::function<int ()> eval)
+                        std::function<int (bool)> eval)
 {
-    if (depth == 0) return emptyplay(eval());
+    if (depth == 0) return empty_play(eval(player));
 
     int end_game = won_grid(metagrid);
-    if (end_game != 42) return emptyplay(end_game*range);
+    if (end_game != 42) return empty_play(end_game*range);
 
     std::vector<Coord> playable = playable_moves();
-    MinmaxRep score = emptyplay(player ? alpha : beta);
+    MinmaxRep score = empty_play(player ? alpha : beta);
     int nb_eq_scores = 1; //on veut un coup random parmi ceux du même score
 
     for(Coord play : playable)
@@ -328,7 +331,7 @@ int Grid::evaluate()
 
 int frandom()
 {
-  return (99 - (std::rand() % 199)) 
+  return (99 - (std::rand() % 199));
 }
 
 int main()
@@ -337,7 +340,7 @@ int main()
 
     Grid g;
     std::function<int(bool)> eval = [&g](bool player){return g.random_min_max(player, frandom, 1000);};
-    MinmaxRep res = g.pseudo_complete_search(1000, eval);
+    MinmaxRep res = g.pseudo_complete_search(1000, eval, 6, true);
     //g.min_max(8, true, -10, 10, 10, [&g](){return g.evaluate();});
 
     std::printf("%d\n", res.score);
