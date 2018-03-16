@@ -123,7 +123,10 @@ struct Grid
     {
         playgrid = old_playgrid;
         grid[play.big][play.little] = Empty;
-        //TODO : update les conditions de victoire
+        if (metagrid[playgrid] != Empty)
+	  {
+	    if (won_grid (grid[play.big]) == 42) metagrid[playgrid] = Empty;
+	  }
     }
 
     void do_move(Coord play, bool player)
@@ -132,14 +135,11 @@ struct Grid
         grid[play.big][play.little] = p;
         if (metagrid[play.big] == Empty)
         {
-            switch (won_grid (grid[play.big]))
-            {
-            case (player ? 1 : -1) :
-                metagrid[play.big] = p;
-                break;
-            case 0:
-                metagrid[play.big] = Draw;
-            }
+	  int k = won_grid (grid[play.big]);
+            
+	  if (k== (player ? 1 : -1)) metagrid[play.big] = p;
+          if (k == 0) metagrid[play.big] = Draw;
+            
         }
         playgrid = play.little;
     }
