@@ -214,22 +214,22 @@ bool Grid::player_won(Case* g, Case p)
     return res;
 }
 
-MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval, int depth, bool player)
+MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval, int depth, bool player, bool quiet)
 {
     MinmaxRep play;
     MinmaxRep res = empty_play(IN_PROGRESS);
-    int yolo = 0;
+    int play_number = 0;
     while (won_grid(metagrid) == IN_PROGRESS)
     {
-        yolo++;
-        std::cout << yolo << std::endl;
+        play_number++;
+        if(!quiet) std::cout << play_number << std::endl;
         play = min_max(depth, player, -range -1, range + 1, range, eval);
         res.suivants.push(res.coup);
         res.score = play.score;
         res.coup = play.coup;
         do_move(play.coup,player);
         player = !player;
-        print();
+        if(!quiet) print();
     }
     return res;
 }
@@ -364,20 +364,32 @@ int frandom()
     return (99 - (std::rand() % 199));
 }
 
-int main()
+int main(int argc, char** argv)
 {
     unsigned seed = std::time(nullptr);
+    bool quiet = false;
+
+    for(int a = 1 ; a < argc ; a++)
+    {
+        std::string arg = argv[a];
+
+        if(arg == "-q") quiet = true;
+        else if(arg == "-r" && a < argc-1)
+        {
+            a++;
+            seed = std::atoi(argv[a]);
+        }
+    }
 
     std::printf("Seed : %d\n", seed);
     std::srand(seed);
 
     Grid g;
     std::function<int(bool)> eval = [&g](bool player){return g.random_min_max(player, frandom, 1000);};
-    MinmaxRep res = g.pseudo_complete_search(1000, eval, 6, true);
+    MinmaxRep res = g.pseudo_complete_search(1000, eval, 6, true, quiet);
     //g.min_max(8, true, -10, 10, 10, [&g](){return g.evaluate();});
 
     std::printf("Score : %d\n", res.score);
-    std::printf("Seed : %d\n", seed);
 
     return 0;
 }
