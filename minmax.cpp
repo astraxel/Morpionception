@@ -1,6 +1,8 @@
 #include "minmax.h"
 #include <ctime>
 
+const int IN_PROGRESS = 42;
+
 MinmaxRep mini(MinmaxRep a, MinmaxRep b, int p)
 {
     //Avec proba 1/p, si les scores sont égaux, b est renvoyé
@@ -81,28 +83,28 @@ void Grid::print()
 
     printf("+-+-+-+\n");
     for (int c=0; c<3; c++)
-      {
-	printf("|");
-	for (int l=0; l<3; l++)
-	  {
-	    switch (metagrid[3*c+l])
-	      {
-	      case Empty:
-		printf(" |");
-		break;
-	      case X:
-		printf("X|");
-		break;
-	      case O:
-		printf("O|");
-		break;
-	      case Draw:
-		printf("#|");
-		break;
-	      }
-	  }
-	printf("\n+-+-+-+\n");
-      }
+    {
+        printf("|");
+        for (int l=0; l<3; l++)
+        {
+            switch (metagrid[3*c+l])
+            {
+            case Empty:
+                printf(" |");
+                break;
+            case X:
+                printf("X|");
+                break;
+            case O:
+                printf("O|");
+                break;
+            case Draw:
+                printf("#|");
+                break;
+            }
+        }
+        printf("\n+-+-+-+\n");
+    }
 }
 
 bool Grid::is_full(Case* g)
@@ -119,9 +121,9 @@ void Grid::undo_move(int old_playgrid, Coord play)
 {
     playgrid = old_playgrid;
     grid[play.big][play.little] = Empty;
-    if (metagrid[playgrid] != Empty)
+    if (metagrid[play.big] != Empty)
     {
-        if (won_grid (grid[play.big]) == 42) metagrid[playgrid] = Empty;
+        if (won_grid(grid[play.big]) == IN_PROGRESS) metagrid[play.big] = Empty;
     }
 }
 
@@ -131,10 +133,10 @@ void Grid::do_move(Coord play, bool player)
     grid[play.big][play.little] = p;
     if (metagrid[play.big] == Empty)
     {
-        int k = won_grid (grid[play.big]);
+        int k = won_grid(grid[play.big]);
 
-        if (k== (player ? 1 : -1)) metagrid[play.big] = p;
         if (k == 0) metagrid[play.big] = Draw;
+        else if (k != IN_PROGRESS) metagrid[play.big] = p;
 
     }
     playgrid = play.little;
@@ -167,21 +169,20 @@ std::vector<Coord> Grid::playable_moves()
 
 int Grid::won_grid(Case* g)
 {
-    //-1 = perdu, 0 = draw, 1 = gagné, 42 = en cours
+    //-1 = perdu, 0 = draw, 1 = gagné, IN_PROGRESS = en cours
     if (player_won(g, X)) return 1;
     if (player_won(g, O)) return -1;
     if (is_complete(g))   return 0;
-    return 42;
+    return IN_PROGRESS;
 }
 
 bool Grid::is_complete(Case* g)
 {
-    bool res = false;
     for (int j=0 ; j <9 ; j++)
     {
-        if (g[j] == Empty) res = false;
+        if (g[j] == Empty) return false;
     }
-    return res;
+    return true;
 }
 
 bool Grid::player_won(Case* g, Case p)
@@ -215,22 +216,22 @@ bool Grid::player_won(Case* g, Case p)
 
 MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval, int depth, bool player)
 {
-  MinmaxRep play;
-  MinmaxRep res = empty_play(42);
-  int yolo = 0;
-  while (won_grid (metagrid) == 42)
+    MinmaxRep play;
+    MinmaxRep res = empty_play(IN_PROGRESS);
+    int yolo = 0;
+    while (won_grid(metagrid) == IN_PROGRESS)
     {
-      yolo++;
-      std::cout << yolo << std::endl;
-      play = min_max(depth, player, -range -1, range + 1, range, eval);
-      res.suivants.push(res.coup);
-      res.score = play.score;
-      res.coup = play.coup;
-      do_move(play.coup,player);
-      player = !player;
-      print ();
+        yolo++;
+        std::cout << yolo << std::endl;
+        play = min_max(depth, player, -range -1, range + 1, range, eval);
+        res.suivants.push(res.coup);
+        res.score = play.score;
+        res.coup = play.coup;
+        do_move(play.coup,player);
+        player = !player;
+        print();
     }
-  return res;
+    return res;
 }
 
 MinmaxRep Grid::min_max(int depth, bool player, int alpha, int beta, int range,
@@ -239,7 +240,7 @@ MinmaxRep Grid::min_max(int depth, bool player, int alpha, int beta, int range,
     if (depth == 0) return empty_play(eval(player));
 
     int end_game = won_grid(metagrid);
-    if (end_game != 42) return empty_play(end_game*range);
+    if (end_game != IN_PROGRESS) return empty_play(end_game*range);
 
     std::vector<Coord> playable = playable_moves();
     MinmaxRep score = empty_play(player ? alpha : beta);
@@ -306,7 +307,7 @@ int Grid::random_min_max(bool player, std::function<int ()> choice, int range)
 {
 
     int end_game = won_grid(metagrid);
-    if (end_game != 42) return end_game*range;
+    if (end_game != IN_PROGRESS) return end_game*range;
 
     std::vector<Coord> playable = playable_moves();
 
@@ -360,21 +361,23 @@ int Grid::evaluate()
 
 int frandom()
 {
-  return (99 - (std::rand() % 199));
+    return (99 - (std::rand() % 199));
 }
 
 int main()
 {
-  unsigned seed = std::time(nullptr);
-  std::srand(seed);
+    unsigned seed = std::time(nullptr);
 
-  Grid g;
-  std::function<int(bool)> eval = [&g](bool player){return g.random_min_max(player, frandom, 1000);};
-  MinmaxRep res = g.pseudo_complete_search(1000, eval, 6, true);
-  //g.min_max(8, true, -10, 10, 10, [&g](){return g.evaluate();});
+    std::printf("Seed : %d\n", seed);
+    std::srand(seed);
 
-  std::printf("Score : %d\n", res.score);
-  std::printf("Seed : %d\n", seed);
+    Grid g;
+    std::function<int(bool)> eval = [&g](bool player){return g.random_min_max(player, frandom, 1000);};
+    MinmaxRep res = g.pseudo_complete_search(1000, eval, 6, true);
+    //g.min_max(8, true, -10, 10, 10, [&g](){return g.evaluate();});
 
-  return 0;
+    std::printf("Score : %d\n", res.score);
+    std::printf("Seed : %d\n", seed);
+
+    return 0;
 }
