@@ -1,4 +1,5 @@
 #include "minmax.h"
+#include <ctime>
 
 MinmaxRep mini(MinmaxRep a, MinmaxRep b, int p)
 {
@@ -200,6 +201,9 @@ MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval,
       res.suivants.push(res.coup);
       res.score = play.score;
       res.coup = play.coup;
+      do_move(play.coup,player);
+      player = !player;
+      print ();
     }
   return res;
 }
@@ -336,7 +340,7 @@ int frandom()
 
 int main()
 {
-    std::srand(42);
+  std::srand(std::time(nullptr));
 
     Grid g;
     std::function<int(bool)> eval = [&g](bool player){return g.random_min_max(player, frandom, 1000);};
