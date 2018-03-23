@@ -381,7 +381,7 @@ int main(int argc, char** argv)
         }
     }
 
-    std::printf("Seed : %d\n", seed);
+    if(!quiet) std::printf("Seed : %d\n", seed);
     std::srand(seed);
 
     Grid g;
@@ -389,7 +389,8 @@ int main(int argc, char** argv)
     MinmaxRep res = g.pseudo_complete_search(1000, eval, 6, true, quiet);
     //g.min_max(8, true, -10, 10, 10, [&g](){return g.evaluate();});
 
-    std::printf("Score : %d\n", res.score);
+    if(!quiet) std::printf("Score : %d\n", res.score);
+    else return (res.score / 1000) + 1;
 
     return 0;
 }

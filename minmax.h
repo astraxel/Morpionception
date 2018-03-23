@@ -49,7 +49,7 @@ struct Grid
 
     //ALGORITHME PSEUDO-EXHAUSTIF
     MinmaxRep pseudo_complete_search(int range, std::function<int(bool)> eval,
-                                      int depth, bool player);
+                                      int depth, bool player, bool quiet);
 
     /*
      * ALGORITHME MINMAX DETERMINISTE
