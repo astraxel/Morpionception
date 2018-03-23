@@ -214,7 +214,7 @@ bool Grid::player_won(Case* g, Case p)
     return res;
 }
 
-MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval, int depth, bool player, bool quiet)
+MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval, int depthX, int depthO, bool player, bool quiet)
 {
     MinmaxRep play;
     MinmaxRep res = empty_play(IN_PROGRESS);
@@ -223,7 +223,7 @@ MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval,
     {
         play_number++;
         if(!quiet) std::cout << play_number << std::endl;
-        play = min_max(depth, player, -range -1, range + 1, range, eval);
+        play = min_max(player ? depthX : depthO, player, -range-1, range+1, range, eval);
         res.suivants.push(res.coup);
         res.score = play.score;
         res.coup = play.coup;
@@ -369,6 +369,9 @@ int main(int argc, char** argv)
     unsigned seed = std::time(nullptr);
     bool quiet = false;
 
+    int depthX = 7;
+    int depthO = 7;
+
     for(int a = 1 ; a < argc ; a++)
     {
         std::string arg = argv[a];
@@ -379,6 +382,16 @@ int main(int argc, char** argv)
             a++;
             seed = std::atoi(argv[a]);
         }
+        else if(arg == "-dX" && a < argc-1)
+        {
+            a++;
+            depthX = std::atoi(argv[a]);
+        }
+        else if(arg == "-dO" && a < argc-1)
+        {
+            a++;
+            depthO = std::atoi(argv[a]);
+        }
     }
 
     if(!quiet) std::printf("Seed : %d\n", seed);
@@ -386,7 +399,7 @@ int main(int argc, char** argv)
 
     Grid g;
     std::function<int(bool)> eval = [&g](bool player){return g.random_min_max(player, frandom, 1000);};
-    MinmaxRep res = g.pseudo_complete_search(1000, eval, 6, true, quiet);
+    MinmaxRep res = g.pseudo_complete_search(1000, eval, depthX, depthO, true, quiet);
     //g.min_max(8, true, -10, 10, 10, [&g](){return g.evaluate();});
 
     if(!quiet) std::printf("Score : %d\n", res.score);
