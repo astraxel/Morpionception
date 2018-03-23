@@ -78,6 +78,31 @@ void Grid::print()
         }
         printf("\n+---+---+---+\n");
     }
+
+    printf("+-+-+-+\n");
+    for (int c=0; c<3; c++)
+      {
+	printf("|");
+	for (int l=0; l<3; l++)
+	  {
+	    switch (metagrid[3*c+l])
+	      {
+	      case Empty:
+		printf(" |");
+		break;
+	      case X:
+		printf("X|");
+		break;
+	      case O:
+		printf("O|");
+		break;
+	      case Draw:
+		printf("#|");
+		break;
+	      }
+	  }
+	printf("\n+-+-+-+\n");
+      }
 }
 
 bool Grid::is_full(Case* g)
@@ -340,14 +365,16 @@ int frandom()
 
 int main()
 {
-  std::srand(std::time(nullptr));
+  unsigned seed = std::time(nullptr);
+  std::srand(seed);
 
-    Grid g;
-    std::function<int(bool)> eval = [&g](bool player){return g.random_min_max(player, frandom, 1000);};
-    MinmaxRep res = g.pseudo_complete_search(1000, eval, 6, true);
-    //g.min_max(8, true, -10, 10, 10, [&g](){return g.evaluate();});
+  Grid g;
+  std::function<int(bool)> eval = [&g](bool player){return g.random_min_max(player, frandom, 1000);};
+  MinmaxRep res = g.pseudo_complete_search(1000, eval, 6, true);
+  //g.min_max(8, true, -10, 10, 10, [&g](){return g.evaluate();});
 
-    std::printf("%d\n", res.score);
+  std::printf("Score : %d\n", res.score);
+  std::printf("Seed : %d\n", seed);
 
-    return 0;
+  return 0;
 }
