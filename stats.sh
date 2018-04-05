@@ -4,9 +4,12 @@ loss=0
 draw=0
 victory=0
 
-for i in `seq $1`
+nb=$1
+shift
+
+for i in `seq $nb`
 do
-    ./minmax -q
+    ./minmax -q $@
     res=$?
     if [ $res = 0 ]
     then

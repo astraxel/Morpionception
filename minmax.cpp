@@ -249,55 +249,30 @@ MinmaxRep Grid::min_max(int depth, bool player, int alpha, int beta, int range,
     for(Coord play : playable)
     {
         int old_playgrid = playgrid;
-        do_move(play,player);
+        do_move(play, player);
 
         MinmaxRep score_under;
-        if (player) {
-            score_under = min_max (depth -1, !player, score.score, beta, range, eval);
-            score_under.suivants.push (score_under.coup);
-            score_under.coup = play;
-            if (score_under.score == score.score)
-            {
-                nb_eq_scores ++;
-                score = std::rand() % nb_eq_scores ? score : score_under;
-                // tous les mêmes scores sont equiprobables
-            }
+        if (player) score_under = min_max(depth-1, !player, score.score, beta, range, eval);
+        else score_under = min_max(depth-1, !player, alpha, score.score, range, eval);
 
-            if (score_under.score > score.score)
-            {
-                nb_eq_scores = 1;
-                score = score_under;
-            }
-
-        }
-        else
+        score_under.suivants.push(score_under.coup);
+        score_under.coup = play;
+        if (score_under.score == score.score)
         {
-            score_under = min_max (depth -1, !player, alpha, score.score, range, eval);
-            score_under.suivants.push (score_under.coup);
-            score_under.coup = play;
-            if (score_under.score == score.score)
-            {
-                nb_eq_scores ++;
-                score = std::rand() % nb_eq_scores ? score : score_under;
-                // tous les mêmes scores sont equiprobables
-            }
-            if (score_under.score < score.score)
-            {
-                nb_eq_scores = 1;
-                score = score_under;
-            }
-
+            nb_eq_scores ++;
+            score = std::rand() % nb_eq_scores ? score : score_under;
+            // tous les mêmes scores sont equiprobables
         }
 
-
-        if ((score.score <= alpha && !player) || (score.score >= beta && player))
+        if ((player && score_under.score > score.score) || (!player && score_under.score < score.score))
         {
-            undo_move(old_playgrid, play);
-            return score;
+            nb_eq_scores = 1;
+            score = score_under;
         }
 
         undo_move(old_playgrid, play);
 
+        if ((score.score <= alpha && !player) || (score.score >= beta && player)) return score;
     }
 
     return score;
@@ -372,6 +347,9 @@ int main(int argc, char** argv)
     int depthX = 7;
     int depthO = 7;
 
+    bool forceFirstMove = false;
+    Coord firstMove = Coord{9,9};
+
     for(int a = 1 ; a < argc ; a++)
     {
         std::string arg = argv[a];
@@ -392,14 +370,24 @@ int main(int argc, char** argv)
             a++;
             depthO = std::atoi(argv[a]);
         }
+        else if(arg == "-f" && a < argc-2)
+        {
+            forceFirstMove = true;
+            a++;
+            firstMove.big = std::atoi(argv[a]);
+            a++;
+            firstMove.little = std::atoi(argv[a]);
+        }
     }
 
     if(!quiet) std::printf("Seed : %d\n", seed);
     std::srand(seed);
 
     Grid g;
+    if (forceFirstMove) g.do_move(firstMove, true);
+
     std::function<int(bool)> eval = [&g](bool player){return g.random_min_max(player, frandom, 1000);};
-    MinmaxRep res = g.pseudo_complete_search(1000, eval, depthX, depthO, true, quiet);
+    MinmaxRep res = g.pseudo_complete_search(1000, eval, depthX, depthO, !forceFirstMove, quiet);
     //g.min_max(8, true, -10, 10, 10, [&g](){return g.evaluate();});
 
     if(!quiet) std::printf("Score : %d\n", res.score);
