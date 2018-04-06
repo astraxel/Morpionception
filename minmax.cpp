@@ -3,7 +3,7 @@
 
 const int IN_PROGRESS = 42;
 
-MinmaxRep mini(MinmaxRep a, MinmaxRep b, int p)
+MinmaxAns mini(MinmaxAns a, MinmaxAns b, int p)
 {
     //Avec proba 1/p, si les scores sont égaux, b est renvoyé
     if (a.score != b.score)
@@ -16,7 +16,7 @@ MinmaxRep mini(MinmaxRep a, MinmaxRep b, int p)
     }
 }
 
-MinmaxRep maxi(MinmaxRep a, MinmaxRep b, int p)
+MinmaxAns maxi(MinmaxAns a, MinmaxAns b, int p)
 {
     //Avec proba 1/p, si les scores sont égaux, b est renvoyé
     if (a.score != b.score)
@@ -29,9 +29,9 @@ MinmaxRep maxi(MinmaxRep a, MinmaxRep b, int p)
     }
 }
 
-MinmaxRep empty_play(int score)
+MinmaxAns empty_play(int score)
 {
-    return MinmaxRep{score, std::stack<Coord>()};
+    return MinmaxAns{score, std::stack<Coord>()};
 }
 
 Grid::Grid()
@@ -216,10 +216,10 @@ bool Grid::player_won(Case* g, Case p)
 
 /* Fait un min-max sur la profondeur correspondante au joueur courant,
  * bloque le premier coup, et recommence jusqu'à la fin de la partie. */
-MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval, int depthX, int depthO, bool player, bool quiet)
+MinmaxAns Grid::pseudo_complete_search(int range, std::function<int(bool)> eval, int depthX, int depthO, bool player, bool quiet)
 {
-    MinmaxRep play;
-    MinmaxRep res = empty_play(IN_PROGRESS);
+    MinmaxAns play;
+    MinmaxAns res = empty_play(IN_PROGRESS);
     int play_number = 0;
     while (won_grid(metagrid) == IN_PROGRESS)
     {
@@ -235,9 +235,9 @@ MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval,
     return res;
 }
 
-/* Min-max avec elagage alpha bêta a&vec la fonction d'évaluation eval.
+/* Min-max avec elagage alpha bêta avec la fonction d'évaluation eval.
  * En cas d'égalité, le choix est aléatoire, tiré uniformément. */
-MinmaxRep Grid::min_max(int depth, bool player, int alpha, int beta, int range,
+MinmaxAns Grid::min_max(int depth, bool player, int alpha, int beta, int range,
                         std::function<int (bool)> eval)
 {
     if (depth == 0) return empty_play(eval(player));
@@ -246,38 +246,41 @@ MinmaxRep Grid::min_max(int depth, bool player, int alpha, int beta, int range,
     if (end_game != IN_PROGRESS) return empty_play(end_game*range);
 
     std::vector<Coord> playable = playable_moves();
-    MinmaxRep score = empty_play(player ? alpha : beta);
-    int nb_eq_scores = 1; //on veut un coup random parmi ceux du même score
+    MinmaxAns current_ans = empty_play(player ? alpha : beta);
 
+    std::random_shuffle(playable.begin(), playable.end());
     for(Coord play : playable)
     {
         int old_playgrid = playgrid;
         do_move(play, player);
 
-        MinmaxRep score_under;
-        if (player) score_under = min_max(depth-1, !player, score.score, beta, range, eval);
-        else score_under = min_max(depth-1, !player, alpha, score.score, range, eval);
+        MinmaxAns under_ans;
+        if (player) under_ans = min_max(depth-1, !player, current_ans.score, beta, range, eval);
+        else under_ans = min_max(depth-1, !player, alpha, current_ans.score, range, eval);
 
-        score_under.moves.push(play);
-        if (score_under.score == score.score)
-        {
-            nb_eq_scores++;
-            score = std::rand() % nb_eq_scores ? score : score_under;
-            // tous les mêmes scores sont equiprobables
-        }
+        under_ans.moves.push(play);
 
-        if ((player && score_under.score > score.score) || (!player && score_under.score < score.score))
+        if ((player && under_ans.score > current_ans.score) ||
+            (!player && under_ans.score < current_ans.score))
         {
-            nb_eq_scores = 1;
-            score = score_under;
+            current_ans = under_ans;
         }
 
         undo_move(old_playgrid, play);
 
-        if ((score.score <= alpha && !player) || (score.score >= beta && player)) return score;
+        if(player)
+        {
+            if(current_ans.score > beta || current_ans.score == range)
+                return current_ans;
+        }
+        else
+        {
+            if(current_ans.score < alpha || current_ans.score == -range)
+                return current_ans;
+        }
     }
 
-    return score;
+    return current_ans;
 }
 
 int Grid::random_min_max(bool player, std::function<int ()> choice, int range)
@@ -389,7 +392,7 @@ int main(int argc, char** argv)
     if (forceFirstMove) g.do_move(firstMove, true);
 
     std::function<int(bool)> eval = [&g](bool player){return g.random_min_max(player, frandom, 1000);};
-    MinmaxRep res = g.pseudo_complete_search(1000, eval, depthX, depthO, !forceFirstMove, quiet);
+    MinmaxAns res = g.pseudo_complete_search(1000, eval, depthX, depthO, !forceFirstMove, quiet);
     //g.min_max(8, true, -10, 10, 10, [&g](){return g.evaluate();});
 
     if(!quiet) std::printf("Score : %d\n", res.score);

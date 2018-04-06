@@ -17,7 +17,7 @@ struct Coord
     int little;
 };
 
-struct MinmaxRep
+struct MinmaxAns
 {
     int score;
     std::stack<Coord> moves;
@@ -47,7 +47,7 @@ struct Grid
     bool player_won(Case* g, Case p);
 
     //ALGORITHME PSEUDO-EXHAUSTIF
-    MinmaxRep pseudo_complete_search(int range, std::function<int(bool)> eval,
+    MinmaxAns pseudo_complete_search(int range, std::function<int(bool)> eval,
                                      int depthX, int depthO, bool player,
                                      bool quiet);
 
@@ -56,7 +56,7 @@ struct Grid
      * Envoyer 9 comme secteur au départ, range est la valeur absolue du
      * score max = victoire/défaite assurée
      */
-    MinmaxRep min_max(int depth, bool player, int alpha, int beta, int range,
+    MinmaxAns min_max(int depth, bool player, int alpha, int beta, int range,
                       std::function<int(bool)> eval);
 
     //ALGORITHME MINMAX RANDOMISE
