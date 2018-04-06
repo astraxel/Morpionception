@@ -19,9 +19,8 @@ struct Coord
 
 struct MinmaxRep
 {
-    Coord coup;
     int score;
-    std::stack<Coord> suivants;
+    std::stack<Coord> moves;
 };
 
 struct Grid

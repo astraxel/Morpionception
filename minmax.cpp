@@ -31,7 +31,7 @@ MinmaxRep maxi(MinmaxRep a, MinmaxRep b, int p)
 
 MinmaxRep empty_play(int score)
 {
-    return MinmaxRep {Coord{9,9}, score, std::stack<Coord>()};
+    return MinmaxRep{score, std::stack<Coord>()};
 }
 
 Grid::Grid()
@@ -214,6 +214,8 @@ bool Grid::player_won(Case* g, Case p)
     return res;
 }
 
+/* Fait un min-max sur la profondeur correspondante au joueur courant,
+ * bloque le premier coup, et recommence jusqu'à la fin de la partie. */
 MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval, int depthX, int depthO, bool player, bool quiet)
 {
     MinmaxRep play;
@@ -224,16 +226,17 @@ MinmaxRep Grid::pseudo_complete_search(int range, std::function<int(bool)> eval,
         play_number++;
         if(!quiet) std::cout << play_number << std::endl;
         play = min_max(player ? depthX : depthO, player, -range-1, range+1, range, eval);
-        res.suivants.push(res.coup);
         res.score = play.score;
-        res.coup = play.coup;
-        do_move(play.coup,player);
+        res.moves.push(play.moves.top());
+        do_move(play.moves.top(),player);
         player = !player;
         if(!quiet) print();
     }
     return res;
 }
 
+/* Min-max avec elagage alpha bêta a&vec la fonction d'évaluation eval.
+ * En cas d'égalité, le choix est aléatoire, tiré uniformément. */
 MinmaxRep Grid::min_max(int depth, bool player, int alpha, int beta, int range,
                         std::function<int (bool)> eval)
 {
@@ -255,11 +258,10 @@ MinmaxRep Grid::min_max(int depth, bool player, int alpha, int beta, int range,
         if (player) score_under = min_max(depth-1, !player, score.score, beta, range, eval);
         else score_under = min_max(depth-1, !player, alpha, score.score, range, eval);
 
-        score_under.suivants.push(score_under.coup);
-        score_under.coup = play;
+        score_under.moves.push(play);
         if (score_under.score == score.score)
         {
-            nb_eq_scores ++;
+            nb_eq_scores++;
             score = std::rand() % nb_eq_scores ? score : score_under;
             // tous les mêmes scores sont equiprobables
         }
